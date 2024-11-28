@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: telegram_bot
+    env_file: 
+      - .env  # Подключение файла .env
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+    restart: always
+
+  db:
+    image: postgres:15
+    container_name: telegram_bot_db
+    env_file: 
+      - .env  # Подключение файла .env
+    environment:
+      POSTGRES_USER: ${DB_USER}  # Ссылка на переменные из .env
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    restart: always
+
+volumes:
+  db_data:
