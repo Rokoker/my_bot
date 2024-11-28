@@ -10,6 +10,8 @@ import psycopg2
 from psycopg2.extras import DictCursor
 from dotenv import load_dotenv
 import openai
+from openai import AsyncOpenAI
+from openai import OpenAI
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -22,8 +24,10 @@ logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s
 # Загружаем переменные из файла .env
 load_dotenv()
 
-OPEN_API_KEY = os.getenv("OPEN_API_KEY")
-openai.api_key=OPEN_API_KEY
+
+
+
+
 # Читаем настройки из окружения
 DB_CONFIG = {
     'dbname': os.getenv("DB_NAME"),
@@ -32,6 +36,8 @@ DB_CONFIG = {
     'host': os.getenv("DB_HOST"),
     'port': os.getenv("DB_PORT"),
 }
+
+client = AsyncOpenAI(api_key=os.environ['OPENAI_API_KEY'],)
 
 # Инициализация бота и диспетчера
 try:
@@ -145,40 +151,28 @@ async def save_message(chat_id, user_id, text):
 async def summarise(message: Message):
     await message.reply("Ну ты кек")
 
-# Команда /Подскажи
+# Обработчик команды /help
 @router.message(Command("help"))
 async def start_question(message: Message, state: FSMContext):
-    # Устанавливаем состояние ожидания вопроса
     await state.set_state(QuestionStates.waiting_for_question)
     await state.update_data(chat_id=message.chat.id, user_id=message.from_user.id)
-    await message.reply("С чем вам помочь? Пожалуйста, отправьте свой вопрос.")
+    await message.reply("С чем вам помочь? Отправьте свой вопрос.")
 
-# Обработка следующего сообщения пользователя
+# Обработчик вопроса
 @router.message(QuestionStates.waiting_for_question)
 async def handle_question_response(message: Message, state: FSMContext):
-    # Проверяем, что сообщение пришло от ожидаемого пользователя
     data = await state.get_data()
     if message.chat.id != data.get("chat_id") or message.from_user.id != data.get("user_id"):
-        return  # Игнорируем сообщение, если оно не от того же пользователя
-
-    question = message.text
-
-    # Сбрасываем состояние, чтобы больше не ждать сообщений
+        return
     await state.clear()
 
     try:
-        # Отправляем запрос в OpenAI
-        response = openai.Completion.create(
-            model="text-davinci-003",
-            prompt=question,
-            temperature=0.7,
-            max_tokens=200,
-        )
-        answer = response.choices[0].text.strip()
-        await message.reply(f"Вот что я думаю:\n\n{answer}")
+        completion = await client.chat.completions.create(model="gpt-3.5-turbo", messages=[{"role": "user", "content": message.text}])
+        await message.reply(completion)
     except Exception as e:
-        logging.error(f"Ошибка при обращении к OpenAI: {e}")
+        logging.error(f"Ошибка OpenAI: {e}")
         await message.reply("Не удалось получить ответ. Попробуйте позже.")
+
         
 # Логирование всех сообщений
 @router.message()
