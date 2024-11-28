@@ -142,19 +142,12 @@ async def save_message(chat_id, user_id, text):
         conn.close()
 
 @router.message(Command("summarise"))
-async def delete_messages(message: Message):
+async def summarise(message: Message):
     await message.reply("Ну ты кек")
-
-# Логирование всех сообщений
-@router.message()
-async def log_message(message: Message):
-    await save_message(message.chat.id, message.from_user.id, message.text)
-
 
 # Команда /Подскажи
 @router.message(Command("help"))
 async def start_question(message: Message, state: FSMContext):
-    await message.reply("С чем вам помочь? Пожалуйста, отправьте свой вопрос.")
     # Устанавливаем состояние ожидания вопроса
     await state.set_state(QuestionStates.waiting_for_question)
     await state.update_data(chat_id=message.chat.id, user_id=message.from_user.id)
@@ -186,6 +179,14 @@ async def handle_question_response(message: Message, state: FSMContext):
     except Exception as e:
         logging.error(f"Ошибка при обращении к OpenAI: {e}")
         await message.reply("Не удалось получить ответ. Попробуйте позже.")
+        
+# Логирование всех сообщений
+@router.message()
+async def log_message(message: Message):
+    await save_message(message.chat.id, message.from_user.id, message.text)
+
+
+
 
 
 # Установка команд бота
