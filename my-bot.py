@@ -168,7 +168,8 @@ async def handle_question_response(message: Message, state: FSMContext):
 
     try:
         completion = await client.chat.completions.create(model="gpt-3.5-turbo", messages=[{"role": "user", "content": message.text}])
-        await message.reply(completion)
+        response_text = completion.choices[0].message.content
+        await message.reply(response_text)
     except Exception as e:
         logging.error(f"Ошибка OpenAI: {e}")
         await message.reply("Не удалось получить ответ. Попробуйте позже.")
